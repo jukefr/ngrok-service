@@ -46,7 +46,7 @@ do
     case $opt in
         *.zip)
             printf "\nSelected : ${green}$opt${reset}"
-	    ng_main $opt
+	        ng_main $opt
             ;;
         *) echo "Invalid $REPLY";;
     esac
