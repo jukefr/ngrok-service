@@ -1,31 +1,53 @@
-#!/bin/sh
+#!/bin/bash
+# prettiest script I probably ever wrote :3
 
-if [ ! -f ./*.zip ]; then
-    echo "Please grab a copy of ngrok from here first : https://ngrok.com/download"
-    exit 1
-else
-    echo "Unzipping"
-    unzip ./*.zip > /dev/null
-fi
+red=`tput setaf 1`
+green=`tput setaf 2`
+reset=`tput sgr0`
 
-if [ -z "$1" ]
-  then
-    echo "ngrok auth key should be passed as first argument"
-    exit 1
-fi
+function ng_main() {
+ for i in ${targets[*]}
+ do
+    if [[ $i = *"$1"* ]]; then
+      link=$(echo "$i" | grep "$1")
+    fi 
+ done 
+ printf "\nDownloading ngrok.zip..."
+ curl -s -o ngrok.zip "$link"
+ printf "\nUnzipping ngrok.zip..." 
+ unzip ./ngrok.zip > /dev/null
+ printf "\nRemoving ngrok.zip..." 
+ rm ./ngrok.zip
+ printf "\nMoving to /opt/ngrok...\n"
+ sudo mkdir -p /opt/ngrok
+ sudo mv ngrok /opt/ngrok
+ read -p 'Auth Token: ' token
+ token_text="authtoken: $token"
+ sed -i "1s/.*/$token_text/" ./ngrok.yml
+ printf "Creating symbolic links..."
+ sudo ln -s "$PWD/ngrok.service" /etc/systemd/system/ngrok.service &> /dev/null
+ sudo ln -s "$PWD/ngrok.yml" /opt/ngrok/ngrok.yml &> /dev/null
+ printf "\nEnabling system service..."
+ sudo systemctl daemon-reload > /dev/null
+ sudo systemctl enable ngrok.service > /dev/null
+ sudo systemctl start ngrok.service  > /dev/null
 
-# Move to /opt/ngrok
-sudo mkdir -p /opt/ngrok
-sudo mv ngrok /opt/ngrok
+ printf "${green}\n\nAll done!${reset} You can start adding your services in ${red}./ngrok.yml${reset}\n"
+ exit 0 
+}
 
-# Set token
-sed -i -e "s/replaceme/$1/g" ngrok.yml
+# Fetch download link
+targets=($(curl -s https://ngrok.com/download | grep -Eo "(http|https)://bin\.equinox\.io[a-zA-Z0-9./?=_-]*"))
+short_targets=($(curl -s https://ngrok.com/download | grep -Eo "(http|https)://bin\.equinox\.io[a-zA-Z0-9./?=_-]*" | grep -Eo "([^\/]+\$)"))
 
-# Create symbolic links
-sudo ln -s "$PWD/ngrok.service" /etc/systemd/system/ngrok.service
-sudo ln -s "$PWD/ngrok.yml" /opt/ngrok/ngrok.yml
-
-# Enable Service
-sudo systemctl daemon-reload
-sudo systemctl enable ngrok.service
-sudo systemctl start ngrok.service
+printf "\nSelect the right version for your OS (${red}hint${reset}: uname -m says '${green}$(uname -m)${reset}')\n"
+select opt in "${short_targets[@]}"
+do
+    case $opt in
+        *.zip)
+            printf "\nSelected : ${green}$opt${reset}"
+	    ng_main $opt
+            ;;
+        *) echo "Invalid $REPLY";;
+    esac
+done
