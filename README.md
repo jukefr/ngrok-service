@@ -2,6 +2,8 @@
 
 Automatic ngrok systemd service creation / configuration.
 
+![demo](https://s3.eu-west-3.amazonaws.com/juke-github/compressed-demo.gif)
+
 ## Usage
 ```bash
 $ git clone https://github.com/jukefr/ngrok-service.git ~/ngrok-service
